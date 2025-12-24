@@ -2,115 +2,192 @@
 
 import { useEffect, useState } from "react";
 
-const API = "/api/status"; // ⬅️ WAJIB pakai ini (proxy Vercel)
+const API = "/api/status";
 
 export default function Home() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   async function load() {
     try {
       const res = await fetch(API, { cache: "no-store" });
-      if (!res.ok) throw new Error("Fetch failed");
       const json = await res.json();
       setData(json);
       setError(false);
-    } catch (e) {
+    } catch {
       setError(true);
-    } finally {
-      setLoading(false);
     }
   }
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 5000); // auto refresh 5 detik
+    const t = setInterval(load, 5000);
     return () => clearInterval(t);
   }, []);
-
-  // ================= RENDER =================
-
-  if (loading) {
-    return (
-      <main style={styles.center}>
-        <span style={styles.loading}>Loading FAIR system…</span>
-      </main>
-    );
-  }
 
   if (error) {
     return (
       <main style={styles.center}>
-        <span style={styles.error}>❌ Cannot connect to backend</span>
+        <div style={styles.error}>❌ BACKEND OFFLINE</div>
       </main>
     );
   }
 
+  if (!data) {
+    return (
+      <main style={styles.center}>
+        <div style={styles.loading}>LOADING FAIR SYSTEM…</div>
+      </main>
+    );
+  }
+
+  const { system, stats, lastDraw } = data;
+
   return (
     <main style={styles.page}>
-      <h1 style={styles.title}>$FAIR Dashboard</h1>
+      <h1 style={styles.title}>$FAIR</h1>
+      <p style={styles.subtitle}>Fully Transparent Reward System</p>
 
-      <div style={styles.card}>
-        <pre style={styles.pre}>
-{JSON.stringify(data, null, 2)}
-        </pre>
+      <div style={styles.grid}>
+        <Card label="SYSTEM STATUS" value={system.status.toUpperCase()} />
+        <Card label="TOTAL DRAWS" value={stats.totalDraws} />
+        <Card label="DISTRIBUTED" value={`${stats.totalDistributed} SOL`} />
+        <Card label="UNIQUE WINNERS" value={stats.uniqueWinners} />
+      </div>
+
+      <div style={styles.cardBig}>
+        <h2 style={styles.sectionTitle}>LAST DRAW</h2>
+
+        {lastDraw ? (
+          <>
+            <Row label="Winner" value={lastDraw.winner} />
+            <Row label="Reward" value={`${lastDraw.reward} SOL`} />
+            <Row label="Time" value={new Date(lastDraw.time).toLocaleString()} />
+          </>
+        ) : (
+          <div style={styles.empty}>No draw yet</div>
+        )}
       </div>
 
       <p style={styles.footer}>
-        Auto refresh every 5 seconds · Fully transparent · On-chain
+        Auto refresh · On-chain · No manual intervention
       </p>
     </main>
   );
 }
 
-// ================= STYLES =================
+/* ================= COMPONENTS ================= */
+
+function Card({ label, value }) {
+  return (
+    <div style={styles.card}>
+      <div style={styles.cardLabel}>{label}</div>
+      <div style={styles.cardValue}>{value}</div>
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <div style={styles.row}>
+      <span style={styles.rowLabel}>{label}</span>
+      <span style={styles.rowValue}>{value}</span>
+    </div>
+  );
+}
+
+/* ================= STYLES ================= */
+
+const neon = "#00ffe1";
 
 const styles = {
   page: {
     minHeight: "100vh",
-    padding: "40px",
-    background: "radial-gradient(circle at top, #020202, #000)",
-    color: "#00ffe1",
-    fontFamily: "monospace"
+    background: "radial-gradient(circle at top, #050505, #000)",
+    color: neon,
+    fontFamily: "monospace",
+    padding: "32px",
+    textAlign: "center"
   },
   center: {
     minHeight: "100vh",
+    background: "#000",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#000",
     fontFamily: "monospace"
   },
   title: {
-    color: "#00ffcc",
-    textShadow: "0 0 20px #00ffcc",
-    marginBottom: "20px"
+    fontSize: "48px",
+    letterSpacing: "4px",
+    textShadow: `0 0 30px ${neon}`,
+    marginBottom: "4px"
+  },
+  subtitle: {
+    opacity: 0.7,
+    marginBottom: "32px"
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: "16px",
+    marginBottom: "32px"
   },
   card: {
-    border: "1px solid #00ffe1",
-    borderRadius: "8px",
-    padding: "20px",
-    boxShadow: "0 0 25px rgba(0,255,225,0.4)",
+    border: `1px solid ${neon}`,
+    borderRadius: "10px",
+    padding: "16px",
+    boxShadow: `0 0 20px rgba(0,255,225,0.4)`,
     background: "#050505"
   },
-  pre: {
-    margin: 0,
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-word"
+  cardLabel: {
+    fontSize: "12px",
+    opacity: 0.6,
+    marginBottom: "8px"
+  },
+  cardValue: {
+    fontSize: "22px",
+    textShadow: `0 0 12px ${neon}`
+  },
+  cardBig: {
+    border: `1px solid ${neon}`,
+    borderRadius: "14px",
+    padding: "20px",
+    boxShadow: `0 0 30px rgba(0,255,225,0.5)`,
+    background: "#040404",
+    maxWidth: "520px",
+    margin: "0 auto"
+  },
+  sectionTitle: {
+    marginBottom: "16px",
+    textShadow: `0 0 15px ${neon}`
+  },
+  row: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "10px"
+  },
+  rowLabel: {
+    opacity: 0.6
+  },
+  rowValue: {
+    fontWeight: "bold"
+  },
+  empty: {
+    opacity: 0.5,
+    padding: "20px"
   },
   footer: {
-    marginTop: "20px",
-    opacity: 0.6,
-    fontSize: "12px"
+    marginTop: "32px",
+    fontSize: "12px",
+    opacity: 0.5
   },
   error: {
     color: "#ff4d4d",
     fontSize: "18px"
   },
   loading: {
-    color: "#00ffe1",
     fontSize: "18px",
-    opacity: 0.8
+    opacity: 0.7
   }
 };
